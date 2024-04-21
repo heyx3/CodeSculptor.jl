@@ -13,6 +13,10 @@ def = SplitFunction(expr)
 def.args[1].type = :I
 push!(def.where_params, SplitType(:( I<:Integer )))
 
+# Modify metadata
+def.doc_string = "Does something with any integer"
+def.inline = true
+
 # Put it back together and evaluate
 eval(combine_expr(def))
 
