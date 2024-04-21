@@ -10,16 +10,14 @@ You can think of it as a really souped-up version of `splitdef()` and `splitarg(
 * `SplitType` for type declarations (like `C{R, T<:Integer} <: B`)
 * `SplitArg` for function arguments (like `a::Int...`)
 
-Each of them can return `nothing` when constructed, if 
-The constructors can run in a less strict mode by passing `false` into the constructor,
+Each of them can return `nothing` when constructed, if the expression fails to parse.
+The constructors can also run in a less strict mode by passing `false` into the constructor,
     for example to stop `SplitFunction` from verifying that a function name has valid syntax.
 
 Each of them can be deep-copied by constructing with a source instance to copy from.
-Some of them offer extra flags to skip copying of particularly large parts of the AST.
+Some of them offer extra flags to skip copying particular parts of the AST.
 
 ## Helper Functions
-
-There are also several accompanying functions to query and modify expressions:
 
 * `is_scopable_name(expr)` checks that the expression is either a Symbol or a series of Symbols separated by a `.` expression. Optionally allows type parameters at the end, like `A.B{C}`.
 * `expr_deepcopy(e)` works like deepcopy, but without copying special literals/interpolated references (like a `Module`).
