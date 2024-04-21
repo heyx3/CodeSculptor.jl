@@ -178,6 +178,27 @@ end
         end
     end
     #TODO: Test SplitMeta
+    @testset "SplitFunction calls" begin
+        TESTS = [
+            # (input, use_named_param_names_only, expected_output)
+            (
+                :( +(4, 5) ),
+                false,
+                4+5
+            ),
+            (
+                :( Base.titlecase("aB cD eF"; strict=false) ),
+                false,
+                "AB CD EF"
+            )
+        ]
+        @testset for (input, named_param_names_only::Bool, expected_output) in TESTS
+            sf = SplitFunction(input)
+            e = combine_expr(sf, named_param_names_only)
+            v = eval(e)
+            @test v == expected_output
+        end
+    end
     @testset "SplitFunction" begin
         @testset "Parsing" begin
             SUCCESS_TESTS = [

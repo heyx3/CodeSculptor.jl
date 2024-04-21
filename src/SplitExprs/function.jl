@@ -5,6 +5,8 @@ A data representation of a function definition, or lambda,
 You can also split/combine a function call, represented by a `nothing` body,
     but must turn off strict mode (pass `false` in the constructor)
     to successfully parse literal-valued parameters.
+In a generated function call, the only thing that matters in arguments is the name,
+    for example named parameter `a` turns into `a=a`.
 
 A lambda is represented by a `nothing` name.
 Setting both the body and name to `nothing` is not allowed.
@@ -79,7 +81,11 @@ SplitFunction(s::SplitFunction, copy_body::Bool = true) = SplitFunction(
     s.inline, s.generated, s.is_escaped
 )
 
-function combine_expr(sf::SplitFunction)
+"
+When generating a function call, pass `true` for each named arg `a=5` to turn into `a=a`.
+Pass `false` for each named arg `a=5` to turn into `a=5`
+"
+function combine_expr(sf::SplitFunction, call_named_args_use_names::Bool=false)
     if isnothing(sf.body) # A function call?
         if isnothing(sf.name)
             error("A function call/signature must have a name")
@@ -96,16 +102,21 @@ function combine_expr(sf::SplitFunction)
         kw_args = map(sf.kw_args) do arg
             return combine_expr(if arg.is_splat
                 SplitArg(arg.name, nothing, true, nothing, arg.is_escaped)
-            else
+            elseif call_named_args_use_names
                 SplitArg(arg.name, nothing, false, arg.name, arg.is_escaped)
+            else
+                SplitArg(arg.name, nothing, false, arg.default_value, arg.is_escaped)
             end)
         end
 
         raw_expr = Expr(:call,
             sf.name,
-            (isempty(kw_args) ? tuple() : tuple(Expr(:parameters, kw_args...))),
             args...
-        )
+            )
+        if !isempty(kw_args)
+            insert!(raw_expr.args, 2, Expr(:parameters, kw_args...))
+        end
+
         return sf.is_escaped ? esc(raw_expr) : raw_expr
     else # A function definition?
         dict = Dict(
