@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, ".."))
 insert!(LOAD_PATH, 1, ".")
 
 using Test
-using CodeSculptor
+using MacroTools, CodeSculptor
 
 
 function test_split_arg(a, name, type, splat, default, escaped)
@@ -45,14 +45,19 @@ function test_split_function(a, name, args, kw_args, body, return_type,
         test_split_type(actual, expected...)
     end
 
-    @test a.body == body
+    # Strip out the block and LineNumberNode from the body.
+    if MacroTools.isexpr(a.body, :block)
+        @test a.body.args[findfirst(e -> !isa(e, LineNumberNode), a.body.args)] == body
+    else
+        @test a.body == body
+    end
+
     @test a.return_type == return_type
     @test a.doc_string == doc_string
     @test a.inline == inline
     @test a.generated == generated
     @test a.is_escaped == is_escaped
 end
-
 
 @testset "CodeSculptor" begin
     @testset "SplitArg" begin
@@ -209,6 +214,7 @@ end
                         (:qrs, nothing, false, 5, false)
                     ],
                     :( return :( jkl + convert(T, mnop*qrs) ) ),
+                    nothing,
                     [
                         (:T, [ ], :Integer)
                     ],
@@ -250,7 +256,6 @@ end
                      true
                  ), nothing, nothing)
             ]
-            #TODO: Execute tests. Remember to unescape_deep, and name lambdas to 'f'!
             @testset for (input, strict_mode::Bool, expected_fields, eval_code, expected_eval_result) in SUCCESS_TESTS
                 f = SplitFunction(input)
                 @test f !== nothing
@@ -258,17 +263,36 @@ end
                 test_split_function(f, expected_fields...)
 
                 # Test the generated code by eval-ing it.
-                if isnothing(f.name)
-                    f.name == :f
+                if !isnothing(f.body)
+                    if isnothing(f.name)
+                        f.name = :f
+                    end
+                    actual_eval_result = eval(quote
+                        $(unescape_deep(combine_expr(f)))
+                        $eval_code
+                    end)
+                    @test expected_eval_result == actual_eval_result
                 end
-                actual_eval_result = eval(quote
-                    $(unescape_deep(combine_expr(f)))
-                    $eval_code
-                end)
-                @test expected_eval_result == actual_eval_result
             end
         end
-        #TODO: FAILURE_TESTS
+        @testset "Failing to parse" begin
+            FAILURE_TESTS = [
+                # (input, strict_mode)
+                (:( @someMacro ), false), # Fail to get metadata
+                (:( 5 ), false), # Fail to be parsed as function
+                (:( hey_there ), false), # Fail to be parsed as function
+
+                (:( (34)(i::Int) = i ), true), # Name isn't scoped symbol
+
+                (:( f(23) ), true),
+                (:( f(; 25) ), true),
+                (:( f() where {27} ), true),
+            ]
+            @testset for (input, strict_mode::Bool) in FAILURE_TESTS
+                actual = SplitFunction(input, strict_mode)
+                @test actual === nothing
+            end
+        end
     end
     @testset "Helper functions" begin
         @testset "is_function_decl()" begin

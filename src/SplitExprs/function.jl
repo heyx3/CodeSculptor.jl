@@ -1,18 +1,19 @@
 "
-A data representation of a function call, definition, or lambda,
+A data representation of a function definition, or lambda,
     comparable to `MacroTools.splitdef()` but far more thorough.
 
-A function call is represented by a `nothing` body
-    (not to be confused with a body expression `:nothing`).
-A lambda is represented by a `nothing` name.
+You can also split/combine a function call, represented by a `nothing` body,
+    but must turn off strict mode (pass `false` in the constructor)
+    to successfully parse literal-valued parameters.
 
+A lambda is represented by a `nothing` name.
 Setting both the body and name to `nothing` is not allowed.
 "
 mutable struct SplitFunction <: AbstractSplitExpr
     name::Optional # `nothing` if this is a lambda
     args::Vector{SplitArg}
     kw_args::Vector{SplitArg}
-    body::Optional # `nothing` if a function call
+    body::Optional # `nothing` if this is a function call
     return_type::Optional # `nothing` if not given
     where_params::Vector{SplitType}
     doc_string::Optional{AbstractString}
@@ -31,12 +32,6 @@ function SplitFunction(expr, strict_mode::Bool = false)::Optional{SplitFunction}
     if isnothing(metadata)
         return nothing
     end
-    # Check that the expr under the metadata is really a function definition.
-    #NOTE: this snippet comes from MacroTools source;
-    #    unfortunately it isn't available as a helper function
-    if !@capture(longdef(expr), function (fcall_ | fcall_) body_ end)
-        return nothing
-    end
     expr = metadata.core_expr
 
     # If it's just a function call, give it a Nothing body.
@@ -44,10 +39,16 @@ function SplitFunction(expr, strict_mode::Bool = false)::Optional{SplitFunction}
         expr = :( $expr = $nothing )
     end
 
+    # Check that the expr under the metadata is really a function definition.
+    #NOTE: this snippet comes from MacroTools source;
+    #    unfortunately it isn't available as a helper function
+    if !@capture(longdef(expr), function (fcall_ | fcall_) body_ end)
+        return nothing
+    end
+
     dict = MacroTools.splitdef(expr)
 
     # Check for invalid data.
-    #TODO: Unit-tests for strict mode
     args = SplitArg.(dict[:args], Ref(strict_mode))
     kw_args = SplitArg.(dict[:kwargs], Ref(strict_mode))
     type_args = SplitType.(dict[:whereparams], Ref(strict_mode))

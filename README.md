@@ -38,3 +38,4 @@ There are some tools to map between operators and assignments (e.x. `+` and `+=`
 # TODO
 
 * `SplitField` for struct fields (optionally supporting assigned initial values)
+* Break apart `SplitFunction` into `SplitCall`, `SplitSignature`, and `SplitFuncDef`.
