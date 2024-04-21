@@ -1,0 +1,11 @@
+name = "CodeSculptor"
+uuid = "68cd8150-a51e-471f-b122-888ae3e7a445"
+authors = ["William Mishra-Manning <manning.w27@gmail.com>"]
+version = "1.0.0"
+
+[deps]
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
+
+[compat]
+julia = "1.9"
