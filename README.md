@@ -23,9 +23,9 @@ def.args[1] = SplitArg(5, false)
 
 # Check syntax by looking for a null result
 is_type_expr(e) = (SplitType(e) !== nothing)
-@assert is_type_expr(C <: Integer)
-@assert is_type_expr(D)
-@assert !is_type_expr(3 + 8)
+@assert is_type_expr(:( C <: Integer ))
+@assert is_type_expr(:D)
+@assert !is_type_expr(:( 3 + 8 ))
 ````
 
 * `SplitFunction` for function calls and definitions
